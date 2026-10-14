@@ -50,3 +50,7 @@ next-env.d.ts
 /pruebas/navegador-_*
 .firebase/
 firebase-debug.log
+
+.vercel
+.env*
+/pruebas/word-2000.pdf

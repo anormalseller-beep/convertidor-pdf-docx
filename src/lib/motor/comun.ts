@@ -52,6 +52,66 @@ export function cajaSegmento(s: SegmentoRot): CajaTexto {
   return { x: cx - ancho / 2, y: cy - alto / 2, ancho, alto, rot: s.rot };
 }
 
+/** Un cuadro de texto: una o varias líneas consecutivas de un mismo párrafo. */
+export interface BloqueTexto {
+  caja: CajaTexto;
+  lineas: { seg: SegmentoRot; altoTw: number }[];
+  orden: number;
+}
+
+/**
+ * Agrupa líneas consecutivas alineadas a la misma X, con el mismo tamaño y un interlineado
+ * regular, en un solo cuadro de texto (una línea = un párrafo de interlineado exacto).
+ * Reduce unas 10 veces la cantidad de objetos y Word puede abrir documentos de miles de páginas,
+ * sin mover ninguna línea: el alto de cada párrafo se reparte en twips sin acumular redondeo.
+ */
+export function bloquesDeTexto(segs: SegmentoRot[]): BloqueTexto[] {
+  const out: BloqueTexto[] = [];
+  const abiertos: { lineas: SegmentoRot[]; paso: number | null }[] = [];
+  const cerrar = (b: { lineas: SegmentoRot[]; paso: number | null }) => {
+    if (b.lineas.length === 1 || b.paso === null) {
+      for (const s of b.lineas) out.push({ caja: cajaSegmento(s), lineas: [{ seg: s, altoTw: twip(s.tam * FACTOR_LINEA) }], orden: s.orden });
+      return;
+    }
+    const paso = b.paso;
+    const p0 = b.lineas[0];
+    const d = descendente(p0.corridas[0]?.estilo.fuente ?? "Arial") * p0.tam;
+    const x = Math.min(...b.lineas.map((s) => s.x));
+    const fin = Math.max(...b.lineas.map((s) => s.x + s.ancho));
+    const n = b.lineas.length;
+    out.push({
+      caja: { x, y: p0.base - (paso - d), ancho: fin - x + Math.max(2, p0.tam * 0.6), alto: paso * n, rot: 0 },
+      lineas: b.lineas.map((s, k) => ({ seg: s, altoTw: twip((k + 1) * paso) - twip(k * paso) })),
+      orden: Math.min(...b.lineas.map((s) => s.orden)),
+    });
+  };
+  const rectos = segs.filter((s) => !s.rot).sort((a, b) => a.base - b.base || a.x - b.x);
+  for (const s of rectos) {
+    let elegido: (typeof abiertos)[number] | null = null;
+    for (let i = abiertos.length - 1; i >= 0; i--) {
+      const b = abiertos[i];
+      const u = b.lineas[b.lineas.length - 1];
+      const d = s.base - u.base;
+      // bloque que ya quedó atrás: se cierra
+      if (d > Math.max(u.tam, s.tam) * 2.5) {
+        cerrar(b);
+        abiertos.splice(i, 1);
+        continue;
+      }
+      if (elegido || Math.abs(u.x - s.x) > 0.5 || Math.abs(u.tam - s.tam) > 0.3) continue;
+      const ok = b.paso === null ? d >= 1.05 * s.tam && d <= 2.2 * s.tam : Math.abs(d - b.paso) < 0.3;
+      if (ok) elegido = b;
+    }
+    if (elegido) {
+      if (elegido.paso === null) elegido.paso = s.base - elegido.lineas[0].base;
+      elegido.lineas.push(s);
+    } else abiertos.push({ lineas: [s], paso: null });
+  }
+  abiertos.forEach(cerrar);
+  for (const s of segs.filter((q) => q.rot)) out.push({ caja: cajaSegmento(s), lineas: [{ seg: s, altoTw: twip(s.tam * FACTOR_LINEA) }], orden: s.orden });
+  return out;
+}
+
 /** Ajuste de espaciado y escala horizontal para que el texto ocupe el mismo ancho que en el PDF. */
 export function ajusteAncho(c: Corrida, medir?: Medidor): { espTwips: number; escala: number } {
   const n = [...c.texto].length;

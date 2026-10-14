@@ -3,7 +3,7 @@
 // (haría falta LibreOffice en un servidor). Word 2003+ y LibreOffice abren este archivo
 // como documento de Word. Usa cuadros de texto e imágenes VML con posición absoluta.
 import type { PaginaInterpretada } from "./interprete";
-import { ajusteAncho, cajaSegmento, esc, FACTOR_LINEA, margenes, twip, type Medidor } from "./comun";
+import { ajusteAncho, bloquesDeTexto, esc, margenes, twip, type Medidor } from "./comun";
 import type { ResultadoEscritor } from "./escritor-docx";
 
 function base64(datos: Uint8Array): string {
@@ -95,32 +95,38 @@ export class EscritorDoc2003 {
       this.imagenes++;
       r.push(this.imagen(im.datos, im.ext, im.x, im.y, im.ancho, im.alto, 1000 + im.orden, im.rot, im.volteadaV));
     }
-    for (const s of p.segmentos) {
-      const caja = cajaSegmento(s);
+    for (const b of bloquesDeTexto(p.segmentos)) {
+      const caja = b.caja;
       const id = ++this.nForma;
-      const corridas = s.corridas
-        .map((c) => {
-          const { espTwips, escala } = ajusteAncho(c, this.medir);
-          const e = c.estilo;
-          const f = esc(e.fuente);
-          const sz = Math.max(2, Math.round(e.tam * 2));
-          return (
-            `<w:r><w:rPr><w:rFonts w:ascii="${f}" w:fareast="${f}" w:h-ansi="${f}" w:cs="${f}"/>` +
-            (e.negrita ? "<w:b/>" : "") + (e.cursiva ? "<w:i/>" : "") +
-            (e.color !== "000000" ? `<w:color w:val="${e.color}"/>` : "") +
-            (espTwips ? `<w:spacing w:val="${espTwips}"/>` : "") +
-            (escala !== 100 ? `<w:w w:val="${escala}"/>` : "") +
-            `<w:sz w:val="${sz}"/><w:sz-cs w:val="${sz}"/></w:rPr><w:t>${esc(c.texto)}</w:t></w:r>`
-          );
+      const parrafos = b.lineas
+        .map(({ seg, altoTw }) => {
+          const corridas = seg.corridas
+            .map((c) => {
+              const { espTwips, escala } = ajusteAncho(c, this.medir);
+              const e = c.estilo;
+              const f = esc(e.fuente);
+              const sz = Math.max(2, Math.round(e.tam * 2));
+              return (
+                `<w:r><w:rPr><w:rFonts w:ascii="${f}" w:fareast="${f}" w:h-ansi="${f}" w:cs="${f}"/>` +
+                (e.negrita ? "<w:b/>" : "") + (e.cursiva ? "<w:i/>" : "") +
+                (e.color !== "000000" ? `<w:color w:val="${e.color}"/>` : "") +
+                (espTwips ? `<w:spacing w:val="${espTwips}"/>` : "") +
+                (escala !== 100 ? `<w:w w:val="${escala}"/>` : "") +
+                `<w:sz w:val="${sz}"/><w:sz-cs w:val="${sz}"/></w:rPr><w:t>${esc(c.texto)}</w:t></w:r>`
+              );
+            })
+            .join("");
+          const sangria = twip(seg.x - caja.x);
+          return `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${altoTw}" w:line-rule="exact"/>${sangria ? `<w:ind w:left="${sangria}"/>` : ""}</w:pPr>${corridas}</w:p>`;
         })
         .join("");
       const estilo =
-        `position:absolute;margin-left:${pt(caja.x)};margin-top:${pt(caja.y)};width:${pt(caja.ancho)};height:${pt(caja.alto)};z-index:${100000 + s.orden};` +
+        `position:absolute;margin-left:${pt(caja.x)};margin-top:${pt(caja.y)};width:${pt(caja.ancho)};height:${pt(caja.alto)};z-index:${100000 + b.orden};` +
         `mso-position-horizontal-relative:page;mso-position-vertical-relative:page;mso-wrap-style:none` +
         (caja.rot ? `;rotation:${caja.rot.toFixed(2)}` : "");
       r.push(
         `<w:r><w:pict><v:shape id="txt${id}" type="#_x0000_t202" style="${estilo}" filled="f" stroked="f">` +
-          `<v:textbox inset="0,0,0,0"><w:txbxContent><w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${twip(s.tam * FACTOR_LINEA)}" w:line-rule="exact"/></w:pPr>${corridas}</w:p></w:txbxContent></v:textbox>` +
+          `<v:textbox inset="0,0,0,0"><w:txbxContent>${parrafos}</w:txbxContent></v:textbox>` +
           `<w10:wrap type="none"/><w10:anchorlock/></v:shape></w:pict></w:r>`,
       );
     }

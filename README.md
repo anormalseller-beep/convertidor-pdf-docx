@@ -47,7 +47,7 @@ Firebase (plan Spark): Auth con Google + Firestore para el historial de metadato
 | --- | --- |
 | Imágenes apiladas al final | Cada imagen se ancla a la página (`wp:anchor`, relativo a la página) en su posición X/Y exacta. |
 | Imágenes deformadas | El tamaño sale de la matriz de transformación del PDF (escala 1.0) y se escribe en EMU (1 pt = 12 700 EMU) con `noChangeAspect`. Nunca `width: 100%`. |
-| Texto que se reacomoda o se sale del margen | Cada línea es un cuadro de texto anclado a la página con `wrap="none"`: Word no puede partirla ni moverla. El ancho se ajusta con espaciado de caracteres (y escala horizontal si hace falta) medido contra la fuente sustituta. |
+| Texto que se reacomoda o se sale del margen | Las líneas consecutivas de un mismo párrafo (misma X, mismo tamaño, interlineado regular) van en un cuadro de texto anclado a la página con `wrap="none"`; cada línea es un párrafo de interlineado exacto, así Word no puede partirla ni moverla. El ancho se ajusta con espaciado de caracteres (y escala horizontal si hace falta) medido contra la fuente sustituta. |
 | Imágenes que tapan el texto | El texto siempre va en una capa superior (`relativeHeight` mayor); imágenes y formas mantienen entre sí el orden de pintado del PDF. |
 | Saltos de página mal puestos | Una sección por página con salto de sección "página siguiente". El flujo de cada página es un único párrafo de 1 pt, así nada puede desbordar a otra página. |
 | Tamaño u orientación distintos | Cada sección usa el tamaño exacto de su página (Letter, A4 o personalizado) y su orientación. Páginas mixtas verticales/horizontales quedan cada una con la suya. |
@@ -114,9 +114,12 @@ El proyecto no usa ningún servicio de pago y no requiere tarjeta.
   de 64 MB; por encima se lee por rangos desde el disco. El DOCX de salida se arma en bloques
   (Blob), que el navegador puede guardar en disco. Por encima de 200 MB la interfaz pide
   confirmación. Navegadores móviles tienen bastante menos memoria.
-- Rendimiento medido (PC de escritorio, Chrome): 10 000 páginas con texto, una imagen y un
-  recuadro por página en 176 s, DOCX de 15,2 MB, QA sin diferencias.
-- Word abre documentos con decenas de miles de cuadros de texto, pero tarda en paginarlos.
+- Rendimiento medido (PC de escritorio): 10 000 páginas con texto, una imagen y un recuadro por
+  página: 70 s en Node con el mismo motor, DOCX de 3 MB, QA sin diferencias (10 000 de 10 000
+  páginas e imágenes). En Chrome, con la versión anterior del motor, 176 s.
+- Microsoft Word 16 abre y pagina el DOCX de 2 000 páginas (2 000 páginas según Word, 5 min).
+  El de 10 000 páginas lo abre, pero se cierra al paginarlo completo (unos 70 000 objetos
+  flotantes). Para documentos tan grandes conviene dividir el PDF en partes de hasta ~2 000 páginas.
 - La fuente sustituta no es idéntica a la del PDF; el ancho de cada línea se iguala con
   espaciado, por lo que el texto ocupa el mismo lugar, aunque las letras puedan diferir un poco.
 - Texto vertical (CJK) e imágenes inclinadas se colocan sin inclinación; degradados y patrones
@@ -158,8 +161,9 @@ Resultados en `pruebas/`:
 
 - `comparacion-docx/` y `comparacion-doc/`: PDF original y DOCX/DOC abierto en Microsoft Word,
   lado a lado, las 12 páginas.
-- Desvío medido sobre 270 líneas: posición horizontal 0,02 pt, vertical 0,02 pt, ancho 0,05 pt
-  (medianas). Páginas 12 de 12, imágenes 11 de 11, tamaño de página idéntico.
+- Desvío medido en Word sobre 270 líneas (medianas): posición horizontal 0,02 pt, vertical
+  0,13 pt (DOCX) y 0,10 pt (DOC), ancho 0,05 pt. Páginas 12 de 12, imágenes 11 de 11, 26 líneas y
+  rectángulos nativos, tamaño de página idéntico.
 
 ## Registro de cambios por pedido
 
@@ -171,3 +175,8 @@ Resultados en `pruebas/`:
 - Entradas TXT, RTF, ODT, DOCX, DOC, JPG, PNG.
 - Historial opcional con Firebase Auth (Google) + Firestore; archivos en IndexedDB.
 - Pruebas: muestra de 12 páginas comparada en Microsoft Word; 10 000 páginas en el navegador.
+- Líneas de un mismo párrafo agrupadas en un cuadro de texto (340 000 → 40 000 cuadros en 10 000
+  páginas) para que Word pueda abrir documentos grandes.
+- Firebase: proyecto `convertidor-pdf-docx` en plan Spark (cuenta basicgames1234, porque
+  anormalseller alcanzó el límite de proyectos de Google Cloud). Auth con Google, Firestore con
+  reglas por usuario, dominio de Vercel autorizado. Storage no se usa (exige Blaze).

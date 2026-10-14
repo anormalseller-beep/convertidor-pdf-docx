@@ -5,7 +5,7 @@
 // streaming: las imágenes se comprimen y se sueltan apenas se agregan.
 import { Zip, ZipDeflate, ZipPassThrough, strToU8 } from "fflate";
 import type { Forma, PaginaInterpretada } from "./interprete";
-import { ajusteAncho, cajaSegmento, emu, esc, FACTOR_LINEA, margenes, twip, type Medidor } from "./comun";
+import { ajusteAncho, bloquesDeTexto, emu, esc, margenes, twip, type Medidor } from "./comun";
 import type { Corrida } from "./tipos";
 
 const NS =
@@ -201,13 +201,16 @@ export class EscritorDocx {
       const g = this.formaXml(f);
       anclas.push(envolver(this.ancla({ x: g.x, y: g.y, ancho: g.ancho, alto: g.alto, z: Z_IMAGENES + f.orden, detras: false, grafico: g.grafico, bloquearAspecto: false, nombre: "Forma" }), true));
     }
-    for (const s of p.segmentos) {
-      const caja = cajaSegmento(s);
-      const linea = twip(s.tam * FACTOR_LINEA);
-      const parrafo =
-        `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${linea}" w:lineRule="exact"/><w:ind w:left="0" w:right="0" w:firstLine="0"/><w:jc w:val="left"/></w:pPr>` +
-        s.corridas.map((c) => this.corridaXml(c)).join("") +
-        `</w:p>`;
+    for (const b of bloquesDeTexto(p.segmentos)) {
+      const caja = b.caja;
+      const parrafo = b.lineas
+        .map(
+          ({ seg, altoTw }) =>
+            `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${altoTw}" w:lineRule="exact"/><w:ind w:left="${twip(seg.x - caja.x) || 0}" w:right="0" w:firstLine="0"/><w:jc w:val="left"/></w:pPr>` +
+            seg.corridas.map((c) => this.corridaXml(c)).join("") +
+            `</w:p>`,
+        )
+        .join("");
       const grafico =
         `<a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp><wps:cNvSpPr txBox="1"/>` +
         `<wps:spPr><a:xfrm${caja.rot ? ` rot="${Math.round(caja.rot * 60000)}"` : ""}><a:off x="0" y="0"/><a:ext cx="${emu(caja.ancho)}" cy="${emu(caja.alto)}"/></a:xfrm>` +
@@ -215,7 +218,7 @@ export class EscritorDocx {
         `<wps:txbx><w:txbxContent>${parrafo}</w:txbxContent></wps:txbx>` +
         `<wps:bodyPr rot="0" spcFirstLastPara="0" vertOverflow="overflow" horzOverflow="overflow" vert="horz" wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" numCol="1" spcCol="0" rtlCol="0" anchor="t" anchorCtr="0"><a:noAutofit/></wps:bodyPr>` +
         `</wps:wsp></a:graphicData></a:graphic>`;
-      anclas.push(envolver(this.ancla({ x: caja.x, y: caja.y, ancho: caja.ancho, alto: caja.alto, z: Z_TEXTO + s.orden, detras: false, grafico, bloquearAspecto: false, nombre: "Texto" }), true));
+      anclas.push(envolver(this.ancla({ x: caja.x, y: caja.y, ancho: caja.ancho, alto: caja.alto, z: Z_TEXTO + b.orden, detras: false, grafico, bloquearAspecto: false, nombre: "Texto" }), true));
     }
 
     const m = margenes(p);
