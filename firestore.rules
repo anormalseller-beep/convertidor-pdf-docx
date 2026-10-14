@@ -1,0 +1,20 @@
+rules_version = '2';
+// Historial de conversiones: cada usuario solo lee y escribe sus propios metadatos.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /usuarios/{uid}/conversiones/{id} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nombre', 'formato', 'paginas', 'bytes', 'qaOk', 'idLocal', 'creado'])
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 300
+        && request.resource.data.formato in ['docx', 'doc']
+        && request.resource.data.bytes is int
+        && request.resource.data.idLocal is string && request.resource.data.idLocal.size() <= 64
+        && request.resource.data.creado == request.time;
+      allow update: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

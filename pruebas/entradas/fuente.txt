@@ -1,0 +1,3 @@
+Primera línea de texto plano.
+
+Tercera línea con acentos: canción, ñandú.

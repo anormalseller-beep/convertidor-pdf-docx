@@ -1,0 +1,189 @@
+@import "tailwindcss";
+
+/* Paleta: negro, blanco, grises y un único acento azul (#0066cc) para el botón principal y enlaces. */
+:root {
+  --fondo: #fff;
+  --texto: #111;
+  --suave: #666;
+  --tenue: #999;
+  --borde: #ccc;
+  --linea: #eee;
+  --panel: #fff;
+  --acento: #0066cc;
+  --acento-texto: #fff;
+  --error: #111;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    --fondo: #111;
+    --texto: #eee;
+    --suave: #999;
+    --tenue: #666;
+    --borde: #333;
+    --linea: #1a1a1a;
+    --panel: #1a1a1a;
+    --acento: #0066cc;
+    --acento-texto: #fff;
+    color-scheme: dark;
+  }
+}
+
+:root[data-tema="oscuro"] {
+  --fondo: #111;
+  --texto: #eee;
+  --suave: #999;
+  --tenue: #666;
+  --borde: #333;
+  --linea: #1a1a1a;
+  --panel: #1a1a1a;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html,
+body {
+  background: var(--fondo);
+  color: var(--texto);
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+.mono {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+a {
+  color: var(--acento);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.etiqueta {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.caja {
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  background: var(--panel);
+}
+
+.zona {
+  border: 1px dashed var(--borde);
+  border-radius: 2px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--suave);
+}
+.zona:hover,
+.zona[data-activa="true"] {
+  border-color: var(--texto);
+  color: var(--texto);
+}
+.zona:focus-visible,
+.boton:focus-visible,
+.boton-sec:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+.boton {
+  background: var(--acento);
+  color: var(--acento-texto);
+  border: 1px solid var(--acento);
+  border-radius: 2px;
+  padding: 8px 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.boton:disabled {
+  background: var(--linea);
+  border-color: var(--borde);
+  color: var(--tenue);
+  cursor: not-allowed;
+}
+
+.boton-sec {
+  background: transparent;
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.boton-sec:hover {
+  border-color: var(--texto);
+}
+
+input[type="password"],
+input[type="text"] {
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  background: var(--fondo);
+  color: var(--texto);
+  padding: 6px 8px;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--acento);
+}
+
+.barra {
+  height: 6px;
+  background: var(--linea);
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.barra > div {
+  height: 100%;
+  background: var(--texto);
+  transition: width 0.2s linear;
+}
+
+.nota {
+  font-size: 13px;
+  color: var(--suave);
+}
+
+.aviso {
+  border-left: 2px solid var(--texto);
+  padding: 4px 0 4px 10px;
+  font-size: 13px;
+}
+
+table.historial {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.historial td,
+table.historial th {
+  border-top: 1px solid var(--linea);
+  padding: 6px 4px;
+  text-align: left;
+  vertical-align: top;
+}
+table.historial th {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--suave);
+  border-top: 0;
+}
